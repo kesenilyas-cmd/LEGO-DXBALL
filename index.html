@@ -23,12 +23,13 @@ const LV=[["........","00000000","11111111","22222222","33333333"],
 let st='menu',lv=0,lives=5,bricks=[],balls=[],pups=[],parts=[],px=W/2,pw=90,wideT=0,slowT=0,cnt=0,on=true,ac,voice=null,lastI=-1,tt=0;
 const CN=['Red','Orange','Yellow','Green','Blue','Purple','Pink'];
 const BL=["Bulut puts on his own clothes by himself!","Bulut brushes his teeth in the morning and at night.","Brush, brush, brush! Bulut has clean teeth!","Bulut makes good jokes with his friends.","Bulut plays fun games with his friends.","Bulut is kind to his friends.","Bulut shares his toys.","Bulut puts on his shoes by himself!","Bulut is a big, strong boy!"];
+const RP=["Boom boom, smash the bricks!","Red and blue and green and yellow, Bulut is a happy fellow!","Hop, hop, hop, do not stop!","Brush your teeth, one, two, three! Bulut is as strong as can be!","Catch the ball, catch the ball! Bulut can catch them all!","Bricks go crash, bricks go bang! Hear the Lego bricks go clang!","Left, right, left, right! Bulut plays with all his might!","Clap your hands and stomp your feet! Bulut loves this happy beat!","Jump up high and touch the sky!","Make a friend and share a smile!","One, two, three, four! Break some more!","Smash, smash, smash! What a splash!"];
 const P=["Great job!","Good job, Bulut!","Wow! You are good!","Yay! Nice one!","Nice shot!","Good hit!","You are so fast!","You are so strong!","You are a star!","You are a Lego boss!","Smash the bricks!","Boom! Bricks go crash!","Look at the pretty colors!","I like the colors!","Keep going!","Do not stop!","Almost there!","Watch the ball!","Catch the ball!","Go, go, go!","High five!","That was fun!","Super!","Awesome!","Wow, so many bricks!","One more brick!","Yes! You can do it!","Very good!","Bulut loves his uncle too much!","Bulut is a champion!",...BL];
 function pickVoice(){const v=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));voice=v.find(v=>/daniel|alex|david|guy|fred|aaron|arthur|male/i.test(v.name)&&!/female/i.test(v.name))||v[0]||null}
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice()}
 let lastSay=0;
-function say(t,force){if(!on||!window.speechSynthesis)return;const n=Date.now();if(!force&&n-lastSay<1800)return;lastSay=n;
- const u=new SpeechSynthesisUtterance(t);u.lang='en-US';if(voice){u.voice=voice;u.lang=voice.lang}u.rate=.85;u.pitch=1;u.volume=1;
+function say(t,force){if(!on||!window.speechSynthesis)return;const n=Date.now();if(!force&&(n-lastSay<1200||(speechSynthesis.speaking&&n-lastSay<6000)))return;lastSay=n;
+ const u=new SpeechSynthesisUtterance(t);u.lang='en-US';if(voice){u.voice=voice;u.lang=voice.lang}u.rate=1.05;u.pitch=1;u.volume=1;
  const go=()=>{try{speechSynthesis.resume();speechSynthesis.speak(u)}catch(e){}};
  if(speechSynthesis.speaking||speechSynthesis.pending){speechSynthesis.cancel();setTimeout(go,80)}else go()}
 function cheer(){let i;do{i=Math.random()*P.length|0}while(i==lastI);lastI=i;say(P[i])}
@@ -37,17 +38,25 @@ const SONGS=["C4 C4 G4 G4 A4 A4 G4h F4 F4 E4 E4 D4 D4 C4h G4 G4 F4 F4 E4 E4 D4h 
 "E4 D4 C4 D4 E4 E4 E4h D4 D4 D4h E4 G4 G4h E4 D4 C4 D4 E4 E4 E4 E4 D4 D4 E4 D4 C4h".split(' '),
 "C4 C4 C4h E4 E4h E4 E4 E4h G4 G4h C5 C5 C5h G4 G4 G4h E4 E4 E4h C4 C4 C4h".split(' ')];
 const NF={C:0,D:2,E:4,F:5,G:7,A:9,B:11},fq=n=>440*Math.pow(2,(NF[n[0]]+12*(+n[1]-4)-9)/12);
-let mi=0,mn=0,mt=0,mOn=0;
+let mi=0,mn=0,mt=0,mOn=0,bn=0;
+const BASS=['C3','C3','G3','G3','A3','A3','F3','F3'].map(fq);
+function tone(type,f,v,d){const now=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(v,now);g.gain.exponentialRampToValueAtTime(.0005,now+d);o.start(now);o.stop(now+d)}
+function beat(){const k=bn++%16;
+ if(k%4==0){const now=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(150,now);o.frequency.exponentialRampToValueAtTime(40,now+.12);g.gain.setValueAtTime(.12,now);g.gain.exponentialRampToValueAtTime(.001,now+.15);o.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+.16)}
+ if(k%2==1)tone('square',6000,.01,.04);
+ tone('square',BASS[(k>>1)%8],.03,.2)}
 function music(){clearTimeout(mt);
- if(!on||!ac||st=='play'){mt=setTimeout(music,300);return}
+ if(!on||!ac){mt=setTimeout(music,300);return}
+ if(st=='play'){beat();mt=setTimeout(music,230);return}
  const s=SONGS[mi%SONGS.length],t=s[mn],h=t.endsWith('h'),d=h?.84:.42,o=ac.createOscillator(),g=ac.createGain(),now=ac.currentTime;
  o.type='triangle';o.frequency.value=fq(t.replace('h',''));o.connect(g);g.connect(ac.destination);
  g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.07,now+.03);g.gain.exponentialRampToValueAtTime(.0001,now+d*.95);o.start(now);o.stop(now+d);
  if(++mn>=s.length){mn=0;mi++}
  mt=setTimeout(music,d*1000)}
-setInterval(()=>{if(unl&&st!='play')say(BL[Math.random()*BL.length|0])},10000);
+setInterval(()=>{if(unl&&st!='play'){const a=[...BL,...RP];say(a[Math.random()*a.length|0])}},7000);
+setInterval(()=>{if(unl&&st=='play'){const a=[...RP,...BL,...P];say(a[Math.random()*a.length|0])}},2500);
 function load(){bricks=[];LV[lv%LV.length].forEach((r,j)=>[...r].forEach((ch,i)=>{if(ch!='.')bricks.push({x:20+i*40,y:80+j*24,c:+ch})}));reset()}
-function reset(){balls=[{x:px,y:PY-17,vx:0,vy:0,r:16,on:1,a:0}];pups=[];wideT=slowT=0;pw=90;st='ready'}
+function reset(){balls=[{x:px,y:PY-21,vx:0,vy:0,r:20,on:1,a:0}];pups=[];wideT=slowT=0;pw=90;st='ready'}
 const bs=()=>3+Math.min(lv,6)*.15;
 function tap(){
  ac=ac||new(window.AudioContext||window.webkitAudioContext)();ac.resume();
@@ -80,7 +89,7 @@ function step(dt){
   }}
  for(let i=pups.length-1;i>=0;i--){const p=pups[i];p.y+=1.8*dt;
   if(p.y>PY-10&&p.y<PY+PH+10&&Math.abs(p.x-px)<pw/2+12){pups.splice(i,1);beep(900,.15);
-   if(p.t==0){pw=140;wideT=12}else if(p.t==1)slowT=10;else{const n=[];balls.forEach(b=>{if(!b.on&&balls.length+n.length<5)[-.6,.6].forEach(d=>n.push({x:b.x,y:b.y,vx:b.vx+d*2,vy:-Math.abs(b.vy),r:16,a:0}))});balls.push(...n)}
+   if(p.t==0){pw=140;wideT=12}else if(p.t==1)slowT=10;else{const n=[];balls.forEach(b=>{if(!b.on&&balls.length+n.length<5)[-.6,.6].forEach(d=>n.push({x:b.x,y:b.y,vx:b.vx+d*2,vy:-Math.abs(b.vy),r:20,a:0}))});balls.push(...n)}
    say(['Big paddle!','Slow ball!','More balls!'][p.t],1)}
   else if(p.y>H)pups.splice(i,1)}
  balls=balls.filter(b=>b.y<H+20);
@@ -101,7 +110,7 @@ function draw(){
  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.2;if(--p.l<=0){parts.splice(i,1);continue}x.fillStyle=p.c;x.fillRect(p.x,p.y,6,6)}
  x.font='20px sans-serif';x.textAlign='left';x.fillText('❤️'.repeat(Math.max(lives,0)),10,30);
  if(st!='menu'){x.font='bold 16px '+F;x.textAlign='center';x.fillStyle='#fff';x.fillText('Seviye '+(lv+1),W/2,26)}
- x.font='10px sans-serif';x.fillStyle='#ffffffaa';x.textAlign='right';x.fillText('v6',W-6,H-6);
+ x.font='10px sans-serif';x.fillStyle='#ffffffaa';x.textAlign='right';x.fillText('v7',W-6,H-6);
  const pul=1+Math.sin(tt/10)*.06;
  if(st=='menu'){txt('LEGO',230,64,'#ffd400');txt('TUĞLA KIRMA',290,38);txt('Başlamak için dokun!',400,24*pul)}
  if(st=='ready')txt('Topu fırlatmak için dokun!',380,20*pul);
